@@ -1,0 +1,35 @@
+{
+  "name": "sharedfrontpage",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && electron-builder",
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "electron:serve": "concurrently \"vite\" \"cross-env NODE_ENV=development electron .\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Electron Vue.js Application",
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.8.4",
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron-vite": "^3.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.6"
+  }
+}
