@@ -158,6 +158,12 @@
               </div>
             </div>
             
+            <!-- Klasör bilgisi etiketini favorilerde de göster -->
+            <div v-if="(!currentFolder && searchQuery && file.key.includes('/')) || (!currentFolder && showOnlyFavorites && file.key.includes('/'))" class="folder-info-badge">
+              <i class="fas fa-folder"></i>
+              {{ getFolderNameFromKey(file.key) }}
+            </div>
+            
             <div class="file-actions">
               <button @click="downloadFile(file)" class="download-btn">
                 <i class="fas fa-download"></i>
@@ -179,8 +185,8 @@
     
     <!-- Ana Dizin Klasörleri ve Dosyaları -->
     <div v-else-if="s3Folders.length > 0 || filteredFiles.length > 0" class="card">
-      <!-- S3 Klasörleri Listesi (Tarih gruplamadayken klasörleri gösterme) -->
-      <div v-if="s3Folders.length > 0 && !groupByDate" class="folders-section">
+      <!-- S3 Klasörleri Listesi -->
+      <div v-if="s3Folders.length > 0 && !searchQuery && !showOnlyFavorites && !groupByDate" class="folders-section">
         <h2 class="section-title">
           <i class="fas fa-folder"></i>
           Klasörler
@@ -254,6 +260,12 @@
               </div>
             </div>
             
+            <!-- Klasör bilgisi etiketini favorilerde de göster -->
+            <div v-if="(!currentFolder && searchQuery && file.key.includes('/')) || (!currentFolder && showOnlyFavorites && file.key.includes('/'))" class="folder-info-badge">
+              <i class="fas fa-folder"></i>
+              {{ getFolderNameFromKey(file.key) }}
+            </div>
+            
             <div class="file-actions">
               <button @click="downloadFile(file)" class="download-btn">
                 <i class="fas fa-download"></i>
@@ -289,7 +301,7 @@
       class="file-date-groups"
     >
       <!-- S3 Klasörleri Listesi -->
-      <div v-if="s3Folders.length > 0" class="folder-section file-date-group" key="folders-section">
+      <div v-if="s3Folders.length > 0 && !searchQuery && !showOnlyFavorites" class="folder-section file-date-group" key="folders-section">
         <h2 class="date-group-title">
           <i class="fas fa-folder"></i>
           Klasörler
@@ -307,6 +319,7 @@
             <div class="folder-actions">
               <button @click.stop="downloadFolder(folder)" class="folder-download-btn">
                 <i class="fas fa-download"></i>
+                <span>İndir</span>
               </button>
             </div>
           </div>
@@ -355,6 +368,12 @@
               <div class="file-meta">
                 <p class="file-size">{{ formatFileSize(file.size) }}</p>
               </div>
+            </div>
+            
+            <!-- Klasör bilgisi etiketini favorilerde de göster -->
+            <div v-if="(!currentFolder && searchQuery && file.key.includes('/')) || (!currentFolder && showOnlyFavorites && file.key.includes('/'))" class="folder-info-badge">
+              <i class="fas fa-folder"></i>
+              {{ getFolderNameFromKey(file.key) }}
             </div>
             
             <div class="file-actions">
@@ -652,8 +671,8 @@ export default {
       // Önce favorileri filtrele
       let result = [...this.s3Files];
       
-      // Klasör içindeki dosyaları hariç tut (sadece ana dizindeki dosyaları göster)
-      if (!this.currentFolder) {
+      // Klasör içindeki dosyaları hariç tut (sadece ana dizindeki dosyaları göster, arama yoksa ve favorilerde değilsek)
+      if (!this.currentFolder && !this.searchQuery && !this.showOnlyFavorites) {
         // Ana dizindeki dosyaları gösterirken, klasör içindeki dosyaları hariç tut
         // Klasörler "/" ile biter, bu nedenle "/" içeren anahtarları hariç tutuyoruz
         result = result.filter(file => !file.key.includes('/'));
@@ -1511,6 +1530,17 @@ export default {
       };
       
       return mimeMap[fileType.toLowerCase()] || 'audio/mpeg';
+    },
+    
+    // Klasör adını ana dizinden al
+    getFolderNameFromKey(key) {
+      // path formatı: klasörAdı/dosyaAdı
+      const parts = key.split('/');
+      if (parts.length > 1) {
+        // Son eleman dosya adı, ondan önceki eleman klasör adı
+        return parts[parts.length - 2]; // Klasör adını döndür
+      }
+      return '';
     }
   }
 }
@@ -2909,5 +2939,32 @@ export default {
     height: 50px;
     font-size: 0.8em;
   }
+}
+
+/* Klasör bilgisi (eğer dosya bir klasörde ise) */
+.folder-info-badge {
+  background-color: #e9f1ff;
+  color: #4568dc;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 20px 8px 20px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(69, 104, 220, 0.2);
+}
+
+.folder-info-badge i {
+  font-size: 10px;
+}
+
+/* Dosya kartının pozisyonu için */
+.file-card {
+  position: relative;
 }
 </style> 
