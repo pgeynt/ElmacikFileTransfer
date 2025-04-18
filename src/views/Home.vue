@@ -40,7 +40,111 @@
         <div class="upload-content">
           <i class="fas fa-cloud-upload-alt fa-4x"></i>
           <p>Dosyaları sürükleyip bırakın veya seçin</p>
-          <button @click="openFileDialog" class="btn btn-primary">Dosya Seç</button>
+          <div class="upload-buttons">
+            <button @click="openFileDialog" class="btn btn-primary">Dosya Seç</button>
+            <button @click="createFolder" class="btn btn-secondary">Klasör Oluştur</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Klasör Yönetimi Bölümü -->
+    <div v-if="folders.length > 0" class="card folder-section">
+      <div class="card-header">
+        <h2><i class="fas fa-folder"></i> Klasör Yönetimi</h2>
+      </div>
+      
+      <div class="folders-list">
+        <div v-for="(folder, folderIndex) in folders" :key="folderIndex" class="folder-item">
+          <div class="folder-header" @click="toggleFolderExpand(folderIndex)">
+            <div class="folder-title">
+              <i class="fas" :class="folder.expanded ? 'fa-folder-open' : 'fa-folder'"></i>
+              <span v-if="!folder.isEditing">{{ folder.name }}</span>
+              <input 
+                v-else 
+                type="text" 
+                v-model="folder.editName" 
+                @blur="saveFolderName(folderIndex)"
+                @keyup.enter="saveFolderName(folderIndex)"
+                ref="folderNameInput"
+                class="folder-name-input"
+              />
+            </div>
+            <div class="folder-actions">
+              <button @click.stop="editFolderName(folderIndex)" class="action-btn" title="Klasör Adını Düzenle">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click.stop="addFilesToFolder(folderIndex)" class="action-btn" title="Dosya Ekle">
+                <i class="fas fa-plus"></i>
+              </button>
+              <button @click.stop="uploadFolder(folderIndex)" class="action-btn" title="Yükle">
+                <i class="fas fa-upload"></i>
+              </button>
+              <button @click.stop="deleteFolder(folderIndex)" class="action-btn" title="Sil">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="folder.expanded" class="folder-content">
+            <div v-if="folder.files.length === 0" class="empty-folder">
+              <p>Bu klasör boş. Dosya eklemek için "+" butonuna tıklayın.</p>
+            </div>
+            <div v-else class="folder-files">
+              <div v-for="(file, fileIndex) in folder.files" :key="fileIndex" class="folder-file-item">
+                <div class="file-info">
+                  <i :class="getFileIcon(file.type)"></i>
+                  <span v-if="!file.isEditing">{{ file.name }}</span>
+                  <input 
+                    v-else 
+                    type="text" 
+                    v-model="file.editName" 
+                    @blur="saveFileName(folderIndex, fileIndex)"
+                    @keyup.enter="saveFileName(folderIndex, fileIndex)"
+                    ref="fileNameInput"
+                    class="file-name-input"
+                  />
+                </div>
+                <div class="file-actions">
+                  <button @click="editFileName(folderIndex, fileIndex)" class="action-btn" title="Dosya Adını Düzenle">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="removeFileFromFolder(folderIndex, fileIndex)" class="action-btn" title="Kaldır">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Klasör İsim Modal -->
+    <div v-if="folderModal.show" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ folderModal.title }}</h3>
+          <button @click="closeFolderModal" class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="folderName">Klasör Adı:</label>
+            <input 
+              type="text" 
+              id="folderName" 
+              v-model="folderModal.folderName" 
+              @keyup.enter="saveFolderModal"
+              ref="folderModalInput"
+              class="form-control"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeFolderModal" class="btn btn-secondary">İptal</button>
+          <button @click="saveFolderModal" class="btn btn-primary">Kaydet</button>
         </div>
       </div>
     </div>
@@ -194,6 +298,14 @@ export default {
         message: '',
         type: 'success', // 'success', 'error', 'info'
         timeout: null
+      },
+      folders: [],
+      folderModal: {
+        show: false,
+        title: 'Yeni Klasör',
+        folderName: '',
+        editIndex: -1, // -1 yeni klasör, >= 0 ise düzenleme modu
+        callback: null
       }
     }
   },
@@ -227,6 +339,9 @@ export default {
       
       // Mevcut kuyruk durumunu al
       this.fetchQueueStatus();
+
+      // Klasör verilerini yerel depolamadan yükle
+      this.loadFolders();
     }
   },
   methods: {
@@ -471,6 +586,225 @@ export default {
       };
       
       return iconMap[this.popup.type] || iconMap.info;
+    },
+    createFolder() {
+      this.folderModal.title = 'Yeni Klasör';
+      this.folderModal.folderName = '';
+      this.folderModal.editIndex = -1;
+      this.folderModal.show = true;
+      
+      // Modal açıldığında input alanına odaklan
+      this.$nextTick(() => {
+        if (this.$refs.folderModalInput) {
+          this.$refs.folderModalInput.focus();
+        }
+      });
+    },
+    saveFolderModal() {
+      if (!this.folderModal.folderName.trim()) {
+        this.showPopup('Uyarı', 'Klasör adı boş olamaz', 'error');
+        return;
+      }
+      
+      if (this.folderModal.editIndex === -1) {
+        // Yeni klasör ekle
+        this.folders.push({
+          id: Date.now().toString(),
+          name: this.folderModal.folderName,
+          files: [],
+          expanded: true,
+          isEditing: false,
+          editName: this.folderModal.folderName
+        });
+        
+        this.showPopup('Bilgi', `${this.folderModal.folderName} klasörü oluşturuldu`, 'success');
+      } else {
+        // Var olan klasörün adını güncelle
+        this.folders[this.folderModal.editIndex].name = this.folderModal.folderName;
+        this.folders[this.folderModal.editIndex].editName = this.folderModal.folderName;
+        
+        this.showPopup('Bilgi', 'Klasör adı güncellendi', 'success');
+      }
+      
+      // Klasör değişikliklerini kaydet
+      this.saveFolders();
+      
+      // Callback varsa çağır
+      if (typeof this.folderModal.callback === 'function') {
+        this.folderModal.callback();
+      }
+      
+      this.closeFolderModal();
+    },
+    closeFolderModal() {
+      this.folderModal.show = false;
+      this.folderModal.folderName = '';
+      this.folderModal.editIndex = -1;
+      this.folderModal.callback = null;
+    },
+    toggleFolderExpand(index) {
+      this.folders[index].expanded = !this.folders[index].expanded;
+      this.saveFolders();
+    },
+    editFolderName(index) {
+      // Doğrudan düzenleme yerine modal kullan
+      this.folderModal.title = 'Klasör Adını Düzenle';
+      this.folderModal.folderName = this.folders[index].name;
+      this.folderModal.editIndex = index;
+      this.folderModal.show = true;
+      
+      // Modal açıldığında input alanına odaklan
+      this.$nextTick(() => {
+        if (this.$refs.folderModalInput) {
+          this.$refs.folderModalInput.focus();
+        }
+      });
+    },
+    saveFolderName(index) {
+      if (!this.folders[index].editName.trim()) {
+        // Boş isim engelle
+        this.folders[index].editName = this.folders[index].name;
+      } else {
+        // İsmi güncelle
+        this.folders[index].name = this.folders[index].editName;
+      }
+      
+      this.folders[index].isEditing = false;
+      this.saveFolders();
+    },
+    async addFilesToFolder(folderIndex) {
+      if (window.electron) {
+        const result = await window.electron.openFileDialog();
+        if (result) {
+          result.forEach(file => {
+            // Dosyayı klasöre ekle
+            this.folders[folderIndex].files.push({
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: file.name,
+              path: file.path,
+              size: file.size,
+              type: file.type || this.getFileExtension(file.name),
+              lastModified: file.lastModified,
+              isEditing: false,
+              editName: file.name
+            });
+          });
+          
+          // Klasörü kaydet
+          this.saveFolders();
+          
+          this.showPopup('Bilgi', `${result.length} dosya klasöre eklendi`, 'success');
+        }
+      } else {
+        this.showPopup('Hata', 'Dosya seçimi yalnızca Electron ortamında kullanılabilir', 'error');
+      }
+    },
+    uploadFolder(folderIndex) {
+      const folder = this.folders[folderIndex];
+      
+      if (folder.files.length === 0) {
+        this.showPopup('Uyarı', 'Klasör boş, yüklenecek dosya yok', 'error');
+        return;
+      }
+      
+      // Kullanıcıya yükleme başladığını bildir
+      this.showPopup('Bilgi', `${folder.name} klasörü yükleniyor...`, 'info');
+      
+      // Klasörü doğrudan S3'e yükle
+      if (window.electron) {
+        // Dosya nesnelerini serileştirilebilir hale getir
+        const serializableFiles = folder.files.map(file => {
+          return {
+            path: file.path,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            // Date nesnesi yerine string kullan
+            lastModified: file.lastModified ? file.lastModified.toISOString() : new Date().toISOString()
+          };
+        });
+        
+        // S3'e yükle
+        window.electron.uploadFolder({
+          name: folder.name,
+          files: serializableFiles
+        }).then(result => {
+          if (result.success) {
+            this.showPopup('Başarılı', result.message, 'success');
+          } else {
+            this.showPopup('Hata', result.message, 'error');
+          }
+        }).catch(error => {
+          this.showPopup('Hata', `Klasör yükleme hatası: ${error.message}`, 'error');
+        });
+      } else {
+        // Her dosya için yükleme kuyruğuna ekle (electron bulunmuyorsa)
+        folder.files.forEach(file => {
+          if (window.electron && file.path) {
+            window.electron.addToUploadQueue(file.path);
+          }
+        });
+        
+        this.showPopup('Bilgi', `${folder.name} klasöründeki ${folder.files.length} dosya yükleme kuyruğuna eklendi`, 'info');
+      }
+    },
+    deleteFolder(index) {
+      const folder = this.folders[index];
+      if (confirm(`${folder.name} klasörünü silmek istediğinize emin misiniz?`)) {
+        this.folders.splice(index, 1);
+        this.saveFolders();
+        this.showPopup('Bilgi', `${folder.name} klasörü silindi`, 'success');
+      }
+    },
+    editFileName(folderIndex, fileIndex) {
+      this.folders[folderIndex].files[fileIndex].isEditing = true;
+      
+      // Input alanına odaklanma
+      this.$nextTick(() => {
+        if (this.$refs.fileNameInput && this.$refs.fileNameInput[0]) {
+          this.$refs.fileNameInput[0].focus();
+        }
+      });
+    },
+    saveFileName(folderIndex, fileIndex) {
+      const file = this.folders[folderIndex].files[fileIndex];
+      
+      if (!file.editName.trim()) {
+        // Boş isim engelle
+        file.editName = file.name;
+      } else {
+        // İsmi güncelle
+        file.name = file.editName;
+      }
+      
+      file.isEditing = false;
+      this.saveFolders();
+    },
+    removeFileFromFolder(folderIndex, fileIndex) {
+      const fileName = this.folders[folderIndex].files[fileIndex].name;
+      if (confirm(`${fileName} dosyasını klasörden çıkarmak istediğinize emin misiniz?`)) {
+        this.folders[folderIndex].files.splice(fileIndex, 1);
+        this.saveFolders();
+      }
+    },
+    // Klasör verilerini kaydet ve yükle
+    saveFolders() {
+      try {
+        localStorage.setItem('folders', JSON.stringify(this.folders));
+      } catch (error) {
+        console.error('Klasörler kaydedilemedi:', error);
+      }
+    },
+    loadFolders() {
+      try {
+        const foldersData = localStorage.getItem('folders');
+        if (foldersData) {
+          this.folders = JSON.parse(foldersData);
+        }
+      } catch (error) {
+        console.error('Klasörler yüklenemedi:', error);
+        this.folders = [];
+      }
     }
   }
 }
@@ -608,6 +942,12 @@ export default {
 
 .upload-content p {
   margin-bottom: 15px;
+}
+
+.upload-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }
 
 /* Yükleme Kuyruğu Bölümü */
@@ -923,5 +1263,200 @@ td.file-actions {
 
 .popup-close:hover {
   color: #000;
+}
+
+/* Klasör Yönetimi */
+.folder-section {
+  margin-bottom: 25px;
+}
+
+.folders-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.folder-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 15px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.folder-item:last-child {
+  border-bottom: none;
+}
+
+.folder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.folder-title {
+  display: flex;
+  align-items: center;
+}
+
+.folder-title i {
+  margin-right: 10px;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.folder-title input {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.folder-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.folder-content {
+  padding-left: 20px;
+}
+
+.empty-folder {
+  text-align: center;
+  padding: 30px;
+  color: #64748b;
+}
+
+.folder-files {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.folder-file-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.file-info i {
+  margin-right: 10px;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.file-info input {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.3s;
+}
+
+.action-btn:hover {
+  color: #4568dc;
+}
+
+/* Klasör İsim Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.modal-body {
+  margin-bottom: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #64748b;
+  color: white;
+}
+
+.btn-primary {
+  background-color: #4568dc;
+  color: white;
 }
 </style> 

@@ -23,12 +23,17 @@
           <span>Favoriler</span>
         </button>
         
+        <button @click="toggleGroupByDate" :class="{ active: groupByDate }" class="group-by-date-btn">
+          <i class="fas fa-calendar-week"></i>
+          <span>Tarih göre kapsa</span>
+        </button>
+        
         <div class="sort-dropdown">
-          <button class="sort-button">
+          <button @click.stop="toggleSortDropdown" class="sort-button">
             <i class="fas fa-sort"></i>
             <span>Sıralama: {{ getSortLabel() }}</span>
           </button>
-          <div class="dropdown-content">
+          <div v-show="showSortDropdown" class="dropdown-content">
             <button @click="setSortOption('name-asc')" :class="{ 'active': sortOption === 'name-asc' }">
               <i class="fas fa-sort-alpha-down"></i> İsim (A-Z)
             </button>
@@ -52,14 +57,216 @@
       </div>
     </div>
     
+    <!-- Klasör Gezinme Çubuğu (Aktif klasör varsa) -->
+    <div v-if="currentFolder" class="folder-navigation">
+      <button @click="goBackFolder" class="back-button" :disabled="folderHistory.length === 0">
+        <i class="fas fa-arrow-left"></i>
+        <span>Geri</span>
+      </button>
+      
+      <div class="folder-path">
+        <button @click="goToRoot" class="path-item root">
+          <i class="fas fa-home"></i>
+          <span>Ana Dizin</span>
+        </button>
+        <i class="fas fa-chevron-right path-separator"></i>
+        
+        <button v-for="(folder, index) in folderHistory" :key="index" 
+          @click="goToHistoryIndex(index)" 
+          class="path-item">
+          <span>{{ folder.name }}</span>
+          <i class="fas fa-chevron-right path-separator"></i>
+        </button>
+        
+        <span class="current-folder">{{ currentFolder.name }}</span>
+      </div>
+    </div>
+    
     <!-- Yükleniyor Göstergesi -->
     <div v-if="isLoading" class="loading-indicator">
       <i class="fas fa-spinner fa-spin fa-2x"></i>
       <p>Dosyalar yükleniyor...</p>
     </div>
     
-    <!-- Dosya Bulunamadı -->
-    <div v-else-if="filteredFiles.length === 0" class="card">
+    <!-- Klasör İçeriği (eğer bir klasör açıksa) -->
+    <div v-else-if="currentFolder" class="card">
+      <div class="card-header">
+        <h2 class="folder-title">
+          <i class="fas fa-folder-open"></i>
+          {{ currentFolder.name }} Klasörü
+        </h2>
+      </div>
+      
+      <!-- Alt Klasörler -->
+      <div v-if="folderContents.subfolders && folderContents.subfolders.length > 0" class="subfolder-section">
+        <h3 class="section-title">Alt Klasörler</h3>
+        <div class="folder-grid">
+          <div v-for="folder in folderContents.subfolders" :key="folder.key" class="folder-card"
+            @click="openFolder(folder)" @dblclick="openFolder(folder)">
+            <div class="folder-icon">
+              <i class="fas fa-folder fa-3x"></i>
+            </div>
+            <div class="folder-info">
+              <h3 class="folder-name">{{ folder.name }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Klasör İçindeki Dosyalar -->
+      <div v-if="folderContents.files && folderContents.files.length > 0" class="folder-files-section">
+        <h3 class="section-title">Dosyalar</h3>
+        <div class="file-grid">
+          <div v-for="file in folderContents.files" :key="file.key" class="file-card" :data-file-type="file.type">
+            <div class="file-header">
+              <div class="file-icon" :style="getFileIconStyle(file.type)">
+                <i :class="getFileIcon(file.type)" class="fa-2x"></i>
+              </div>
+              <div class="file-actions-small">
+                <button 
+                  @click="toggleFileFavorite(file)" 
+                  class="action-btn-small" 
+                  :class="{'favorited': file.isFavorite}"
+                  title="Favori"
+                >
+                  <i class="fas fa-heart"></i>
+                </button>
+                <button 
+                  @click="previewFile(file)" 
+                  class="action-btn-small" 
+                  :class="{'disabled': !isPreviewSupported(file.type)}"
+                  :disabled="!isPreviewSupported(file.type)"
+                  title="İncele"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button 
+                  @click="shareFile(file)" 
+                  class="action-btn-small"
+                  title="Paylaş"
+                >
+                  <i class="fas fa-share-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="file-info">
+              <h3 class="file-name">{{ file.name }}</h3>
+              <div class="file-meta">
+                <p class="file-size">{{ formatFileSize(file.size) }}</p>
+                <p class="file-date">{{ formatDate(file.lastModified) }}</p>
+              </div>
+            </div>
+            
+            <div class="file-actions">
+              <button @click="downloadFile(file)" class="download-btn">
+                <i class="fas fa-download"></i>
+                <span>İndir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Boş Klasör -->
+      <div v-if="(!folderContents.files || folderContents.files.length === 0) && 
+                 (!folderContents.subfolders || folderContents.subfolders.length === 0)" 
+           class="empty-state">
+        <i class="fas fa-folder-open fa-3x"></i>
+        <p>Bu klasör boş</p>
+      </div>
+    </div>
+    
+    <!-- Ana Dizin Klasörleri ve Dosyaları -->
+    <div v-else-if="s3Folders.length > 0 || filteredFiles.length > 0" class="card">
+      <!-- S3 Klasörleri Listesi (Tarih gruplamadayken klasörleri gösterme) -->
+      <div v-if="s3Folders.length > 0 && !groupByDate" class="folders-section">
+        <h2 class="section-title">
+          <i class="fas fa-folder"></i>
+          Klasörler
+        </h2>
+        
+        <div class="folder-grid">
+          <div v-for="folder in s3Folders" :key="folder.key" class="folder-card"
+            @click="openFolder(folder)" @dblclick="openFolder(folder)">
+            <div class="folder-icon">
+              <i class="fas fa-folder fa-3x"></i>
+            </div>
+            <div class="folder-info">
+              <h3 class="folder-name">{{ folder.name }}</h3>
+            </div>
+            <div class="folder-actions">
+              <button @click.stop="downloadFolder(folder)" class="folder-download-btn">
+                <i class="fas fa-download"></i>
+                <span>İndir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Dosya Listesi Başlığı -->
+      <div v-if="filteredFiles.length > 0 && !groupByDate" class="files-section">
+        <h2 class="section-title">
+          <i class="fas fa-file"></i>
+          Dosyalar
+        </h2>
+        
+        <div class="file-grid">
+          <div v-for="file in filteredFiles" :key="file.key" class="file-card" :data-file-type="file.type">
+            <div class="file-header">
+              <div class="file-icon" :style="getFileIconStyle(file.type)">
+                <i :class="getFileIcon(file.type)" class="fa-2x"></i>
+              </div>
+              <div class="file-actions-small">
+                <button 
+                  @click="toggleFileFavorite(file)" 
+                  class="action-btn-small" 
+                  :class="{'favorited': file.isFavorite}"
+                  title="Favori"
+                >
+                  <i class="fas fa-heart"></i>
+                </button>
+                <button 
+                  @click="previewFile(file)" 
+                  class="action-btn-small" 
+                  :class="{'disabled': !isPreviewSupported(file.type)}"
+                  :disabled="!isPreviewSupported(file.type)"
+                  title="İncele"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button 
+                  @click="shareFile(file)" 
+                  class="action-btn-small"
+                  title="Paylaş"
+                >
+                  <i class="fas fa-share-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="file-info">
+              <h3 class="file-name">{{ file.name }}</h3>
+              <div class="file-meta">
+                <p class="file-size">{{ formatFileSize(file.size) }}</p>
+                <p class="file-date">{{ formatDate(file.lastModified) }}</p>
+              </div>
+            </div>
+            
+            <div class="file-actions">
+              <button @click="downloadFile(file)" class="download-btn">
+                <i class="fas fa-download"></i>
+                <span>İndir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dosya Bulunamadı (Klasör ve dosya yoksa) -->
+    <div v-if="filteredFiles.length === 0 && s3Folders.length === 0" class="card">
       <div class="empty-state">
         <i class="fas fa-search fa-3x"></i>
         <p v-if="searchQuery">
@@ -74,57 +281,92 @@
       </div>
     </div>
     
-    <!-- Dosya Listesi -->
-    <div v-else class="file-grid">
-      <div v-for="file in filteredFiles" :key="file.key" class="file-card">
-        <div class="file-header">
-          <div class="file-icon">
-            <i :class="getFileIcon(file.type)" class="fa-2x"></i>
-          </div>
-          <div class="file-actions-small">
-            <button 
-              @click="toggleFileFavorite(file)" 
-              class="action-btn-small" 
-              :class="{'favorited': file.isFavorite}"
-              title="Favori"
-            >
-              <i class="fas fa-heart"></i>
-            </button>
-            <button 
-              @click="previewFile(file)" 
-              class="action-btn-small" 
-              :class="{'disabled': !isPreviewSupported(file.type)}"
-              :disabled="!isPreviewSupported(file.type)"
-              title="İncele"
-            >
-              <i class="fas fa-eye"></i>
-            </button>
-            <button 
-              @click="shareFile(file)" 
-              class="action-btn-small"
-              title="Paylaş"
-            >
-              <i class="fas fa-share-alt"></i>
-            </button>
-          </div>
-        </div>
+    <!-- Dosya Listesi (Tarih gruplarına göre) -->
+    <transition-group 
+      v-else-if="groupByDate && !currentFolder" 
+      name="date-group-transition" 
+      tag="div" 
+      class="file-date-groups"
+    >
+      <!-- S3 Klasörleri Listesi -->
+      <div v-if="s3Folders.length > 0" class="folder-section file-date-group" key="folders-section">
+        <h2 class="date-group-title">
+          <i class="fas fa-folder"></i>
+          Klasörler
+        </h2>
         
-        <div class="file-info">
-          <h3 class="file-name">{{ file.name }}</h3>
-          <div class="file-meta">
-            <p class="file-size">{{ formatFileSize(file.size) }}</p>
-            <p class="file-date">{{ formatDate(file.lastModified) }}</p>
+        <div class="folder-grid">
+          <div v-for="folder in s3Folders" :key="folder.key" class="folder-card"
+            @click="openFolder(folder)" @dblclick="openFolder(folder)">
+            <div class="folder-icon">
+              <i class="fas fa-folder fa-3x"></i>
+            </div>
+            <div class="folder-info">
+              <h3 class="folder-name">{{ folder.name }}</h3>
+            </div>
+            <div class="folder-actions">
+              <button @click.stop="downloadFolder(folder)" class="folder-download-btn">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
           </div>
-        </div>
-        
-        <div class="file-actions">
-          <button @click="downloadFile(file)" class="download-btn">
-            <i class="fas fa-download"></i>
-            <span>İndir</span>
-          </button>
         </div>
       </div>
-    </div>
+      
+      <!-- Dosya Grupları -->
+      <div v-for="(group, date) in groupedByDateFiles" :key="date" class="file-date-group">
+        <h2 class="date-group-title">{{ date }}</h2>
+        <div class="file-grid date-grouped">
+          <div v-for="file in group" :key="file.key" class="file-card compact" :data-file-type="file.type">
+            <div class="file-header">
+              <div class="file-icon" :style="getFileIconStyle(file.type)">
+                <i :class="getFileIcon(file.type)" class="fa-2x"></i>
+              </div>
+              <div class="file-actions-small">
+                <button 
+                  @click="toggleFileFavorite(file)" 
+                  class="action-btn-small" 
+                  :class="{'favorited': file.isFavorite}"
+                  title="Favori"
+                >
+                  <i class="fas fa-heart"></i>
+                </button>
+                <button 
+                  @click="previewFile(file)" 
+                  class="action-btn-small" 
+                  :class="{'disabled': !isPreviewSupported(file.type)}"
+                  :disabled="!isPreviewSupported(file.type)"
+                  title="İncele"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button 
+                  @click="shareFile(file)" 
+                  class="action-btn-small"
+                  title="Paylaş"
+                >
+                  <i class="fas fa-share-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="file-info">
+              <h3 class="file-name">{{ file.name }}</h3>
+              <div class="file-meta">
+                <p class="file-size">{{ formatFileSize(file.size) }}</p>
+              </div>
+            </div>
+            
+            <div class="file-actions">
+              <button @click="downloadFile(file)" class="download-btn">
+                <i class="fas fa-download"></i>
+                <span>İndir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition-group>
     
     <!-- Bildirim Popup -->
     <div class="popup-notification" v-if="popup.show">
@@ -145,7 +387,7 @@
       <div class="preview-container" :class="{'full-width': preview.contentType === 'excel' || preview.contentType === 'text'}">
         <div class="preview-header">
           <h3 class="preview-title">
-            <i :class="getFileIcon(preview.fileType)" class="mr-2"></i>
+            <i :class="getFileIcon(preview.fileType)" class="mr-2" :style="{ color: getFileIconStyle(preview.fileType).color }"></i>
             {{ preview.fileName }}
           </h3>
           <button @click="closePreview" class="preview-close" title="Kapat">
@@ -226,6 +468,28 @@
             <iframe :src="preview.pdfUrl" width="100%" height="100%" frameborder="0"></iframe>
           </div>
           
+          <!-- Video önizleme -->
+          <div v-else-if="preview.contentType === 'video'" class="video-preview">
+            <video controls autoplay class="video-player">
+              <source :src="preview.videoUrl" :type="getVideoMimeType(preview.fileType)">
+              Tarayıcınız video oynatmayı desteklemiyor.
+            </video>
+          </div>
+          
+          <!-- Ses önizleme -->
+          <div v-else-if="preview.contentType === 'audio'" class="audio-preview">
+            <div class="audio-player-container">
+              <div class="audio-file-info">
+                <i :class="getFileIcon(preview.fileType)" class="fa-3x" :style="{ color: getFileIconStyle(preview.fileType).color }"></i>
+                <h4>{{ preview.fileName }}</h4>
+              </div>
+              <audio controls autoplay class="audio-player">
+                <source :src="preview.audioUrl" :type="getAudioMimeType(preview.fileType)">
+                Tarayıcınız ses oynatmayı desteklemiyor.
+              </audio>
+            </div>
+          </div>
+          
           <!-- Desteklenmeyen dosya türü -->
           <div v-else class="unsupported-file">
             <i class="fas fa-exclamation-circle fa-3x"></i>
@@ -263,7 +527,7 @@
           
           <div v-else class="share-link-box">
             <div class="file-info-wrapper">
-              <div class="share-file-icon">
+              <div class="share-file-icon" :style="getFileIconStyle(shareModal.fileType)">
                 <i :class="getFileIcon(shareModal.fileType)" class="fa-2x"></i>
               </div>
               <div class="share-file-info">
@@ -320,7 +584,9 @@ export default {
       isLoading: true,
       searchQuery: '',
       showOnlyFavorites: false,
+      groupByDate: false,
       sortOption: 'date-desc', // varsayılan sıralama
+      showSortDropdown: false,
       // Popup bildirimi için veri
       popup: {
         show: false,
@@ -328,6 +594,14 @@ export default {
         message: '',
         type: 'success', // 'success', 'error', 'info'
         timeout: null
+      },
+      // S3 Klasör verileri
+      s3Folders: [],
+      currentFolder: null, // Açık klasör (null ise ana dizindeyiz)
+      folderHistory: [], // Gezinme geçmişi
+      folderContents: {
+        files: [],
+        subfolders: []
       },
       // Dosya önizleme için veri
       preview: {
@@ -354,7 +628,11 @@ export default {
         // Resim ve PDF önizleme
         imageUrl: '',
         pdfUrl: '',
-        data: ''
+        data: '',
+        
+        // Video ve Ses önizleme
+        videoUrl: '',
+        audioUrl: ''
       },
       // Paylaşım modal için veri
       shareModal: {
@@ -373,6 +651,13 @@ export default {
     filteredFiles() {
       // Önce favorileri filtrele
       let result = [...this.s3Files];
+      
+      // Klasör içindeki dosyaları hariç tut (sadece ana dizindeki dosyaları göster)
+      if (!this.currentFolder) {
+        // Ana dizindeki dosyaları gösterirken, klasör içindeki dosyaları hariç tut
+        // Klasörler "/" ile biter, bu nedenle "/" içeren anahtarları hariç tutuyoruz
+        result = result.filter(file => !file.key.includes('/'));
+      }
       
       if (this.showOnlyFavorites) {
         result = result.filter(file => file.isFavorite);
@@ -401,12 +686,89 @@ export default {
       result = this.sortFiles(result);
       
       return result;
+    },
+    
+    groupedByDateFiles() {
+      // Tarihe göre dosyaları gruplandır
+      const groups = {};
+      
+      for (const file of this.filteredFiles) {
+        const date = new Date(file.lastModified);
+        const dateKey = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
+        const displayDate = this.formatDate(file.lastModified);
+        
+        if (!groups[displayDate]) {
+          groups[displayDate] = [];
+        }
+        
+        groups[displayDate].push(file);
+      }
+      
+      // Grupları tarih sırasına göre sırala
+      const sortedGroups = {};
+      
+      // Tarihleri bir diziye al ve sırala
+      const sortedDates = Object.keys(groups).sort((a, b) => {
+        // Tarihleri analiz et
+        const datePartsA = a.split(' ');
+        const datePartsB = b.split(' ');
+        
+        // Yıl karşılaştırması
+        const yearA = parseInt(datePartsA[2], 10);
+        const yearB = parseInt(datePartsB[2], 10);
+        
+        if (yearA !== yearB) {
+          return this.sortOption.includes('desc') ? yearB - yearA : yearA - yearB;
+        }
+        
+        // Ay karşılaştırması
+        const months = {
+          'Ocak': 0, 'Şubat': 1, 'Mart': 2, 'Nisan': 3, 'Mayıs': 4, 'Haziran': 5,
+          'Temmuz': 6, 'Ağustos': 7, 'Eylül': 8, 'Ekim': 9, 'Kasım': 10, 'Aralık': 11
+        };
+        
+        const monthA = months[datePartsA[1]];
+        const monthB = months[datePartsB[1]];
+        
+        if (monthA !== monthB) {
+          return this.sortOption.includes('desc') ? monthB - monthA : monthA - monthB;
+        }
+        
+        // Gün karşılaştırması
+        const dayA = parseInt(datePartsA[0], 10);
+        const dayB = parseInt(datePartsB[0], 10);
+        
+        return this.sortOption.includes('desc') ? dayB - dayA : dayA - dayB;
+      });
+      
+      // Sıralanmış grupları oluştur
+      for (const date of sortedDates) {
+        sortedGroups[date] = groups[date];
+      }
+      
+      return sortedGroups;
     }
   },
   async mounted() {
     await this.fetchS3Files();
+    await this.fetchS3Folders();
+
+    // Sayfa üzerinde herhangi bir yere tıklandığında açık menüleri kapat
+    document.addEventListener('click', this.handleOutsideClick);
+  },
+  beforeUnmount() {
+    // Component yok edilmeden önce event listener'ı kaldır
+    document.removeEventListener('click', this.handleOutsideClick);
   },
   methods: {
+    // Sayfa üzerinde menü dışında bir yere tıklandığında açık menüleri kapat
+    handleOutsideClick(event) {
+      const sortDropdown = this.$el.querySelector('.sort-dropdown');
+      if (sortDropdown && !sortDropdown.contains(event.target)) {
+        this.showSortDropdown = false;
+      }
+    },
+
     async fetchS3Files() {
       this.isLoading = true;
       
@@ -429,6 +791,119 @@ export default {
         this.showPopup('Hata', 'Dosyalar yüklenirken beklenmeyen bir hata oluştu', 'error');
       } finally {
         this.isLoading = false;
+      }
+    },
+    
+    // S3 Klasörleri getir
+    async fetchS3Folders() {
+      try {
+        if (window.electron) {
+          const result = await window.electron.listS3Folders();
+          
+          if (result.success) {
+            this.s3Folders = result.folders;
+          } else {
+            console.error('Klasörler yüklenemedi:', result.message);
+            this.s3Folders = [];
+          }
+        } else {
+          console.error('Electron API bulunamadı');
+          this.s3Folders = [];
+        }
+      } catch (error) {
+        console.error('Klasörler yüklenirken hata:', error);
+      }
+    },
+    
+    // Klasör içeriğini getir
+    async openFolder(folder) {
+      this.isLoading = true;
+      
+      try {
+        if (window.electron) {
+          const result = await window.electron.listS3FolderContents(folder.key);
+          
+          if (result.success) {
+            // Mevcut klasörü geçmişe ekle
+            if (this.currentFolder) {
+              this.folderHistory.push(this.currentFolder);
+            }
+            
+            // Yeni klasörü aktif yap
+            this.currentFolder = folder;
+            this.folderContents = {
+              files: result.files || [],
+              subfolders: result.subfolders || []
+            };
+          } else {
+            this.showPopup('Hata', result.message || 'Klasör içeriği yüklenemedi', 'error');
+          }
+        } else {
+          this.showPopup('Hata', 'Electron API bulunamadı', 'error');
+        }
+      } catch (error) {
+        console.error('Klasör içeriği yüklenirken hata:', error);
+        this.showPopup('Hata', 'Klasör içeriği yüklenirken beklenmeyen bir hata oluştu', 'error');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    // Bir önceki klasöre geri dön
+    goBackFolder() {
+      if (this.folderHistory.length > 0) {
+        const previousFolder = this.folderHistory.pop();
+        this.openFolder(previousFolder);
+      } else {
+        // Ana dizine dön
+        this.currentFolder = null;
+        this.folderContents = {
+          files: [],
+          subfolders: []
+        };
+      }
+    },
+    
+    // Ana dizine dön
+    goToRoot() {
+      this.currentFolder = null;
+      this.folderContents = {
+        files: [],
+        subfolders: []
+      };
+      this.folderHistory = [];
+    },
+    
+    // Gezinme geçmişinde belirli bir klasöre git
+    goToHistoryIndex(index) {
+      // İndeks'e kadar olan klasörleri koru, diğerlerini kaldır
+      const targetFolder = this.folderHistory[index];
+      this.folderHistory = this.folderHistory.slice(0, index);
+      this.openFolder(targetFolder);
+    },
+    
+    // Klasörü indir
+    async downloadFolder(folder) {
+      try {
+        if (window.electron) {
+          this.showPopup('Bilgi', 'Klasör indirme işlemi başlatılıyor...', 'info');
+          
+          const result = await window.electron.downloadS3Folder({
+            key: folder.key,
+            name: folder.name
+          });
+          
+          if (result.success) {
+            this.showPopup('Başarılı', result.message, 'success');
+          } else {
+            this.showPopup('Hata', result.message, 'error');
+          }
+        } else {
+          this.showPopup('Hata', 'İndirme işlevi yalnızca Electron ortamında kullanılabilir', 'error');
+        }
+      } catch (error) {
+        console.error('Klasör indirme hatası:', error);
+        this.showPopup('Hata', `İndirme sırasında bir hata oluştu: ${error.message}`, 'error');
       }
     },
     
@@ -485,8 +960,21 @@ export default {
       this.showOnlyFavorites = !this.showOnlyFavorites;
     },
     
+    toggleGroupByDate() {
+      this.groupByDate = !this.groupByDate;
+      this.applyFilters();
+    },
+    
+    toggleSortDropdown(event) {
+      // Olayın yayılmasını engelle (dışarıda tıklama algılanmasın)
+      event.stopPropagation();
+      this.showSortDropdown = !this.showSortDropdown;
+    },
+    
     setSortOption(option) {
       this.sortOption = option;
+      // Sıralama seçildikten sonra menüyü kapat
+      this.showSortDropdown = false;
     },
     
     getSortLabel() {
@@ -563,7 +1051,16 @@ export default {
         '.gif': 'far fa-file-image',
         '.txt': 'far fa-file-alt',
         '.zip': 'far fa-file-archive',
-        '.rar': 'far fa-file-archive'
+        '.rar': 'far fa-file-archive',
+        '.mp4': 'far fa-file-video',
+        '.mov': 'far fa-file-video',
+        '.avi': 'far fa-file-video',
+        '.webm': 'far fa-file-video',
+        '.mp3': 'far fa-file-audio',
+        '.wav': 'far fa-file-audio',
+        '.ogg': 'far fa-file-audio',
+        '.flac': 'far fa-file-audio',
+        '.aac': 'far fa-file-audio'
       };
       
       return iconMap[fileType] || 'far fa-file';
@@ -610,7 +1107,9 @@ export default {
         '.xlsx', '.xls', '.csv', 
         '.txt', '.json', '.xml', '.html', '.css', '.js',
         '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',
-        '.pdf'
+        '.pdf',
+        '.mp4', '.webm', '.mov', '.avi',
+        '.mp3', '.wav', '.ogg', '.flac', '.aac'
       ];
       
       return supportedTypes.includes(fileType.toLowerCase());
@@ -659,6 +1158,12 @@ export default {
                 break;
               case 'pdf':
                 this.preview.pdfUrl = `data:application/pdf;base64,${result.data}`;
+                break;
+              case 'video':
+                this.preview.videoUrl = `data:video/${file.type.replace('.', '')};base64,${result.data}`;
+                break;
+              case 'audio':
+                this.preview.audioUrl = `data:audio/${file.type.replace('.', '')};base64,${result.data}`;
                 break;
             }
           } else {
@@ -786,6 +1291,8 @@ export default {
       this.preview.imageUrl = '';
       this.preview.pdfUrl = '';
       this.preview.data = '';
+      this.preview.videoUrl = '';
+      this.preview.audioUrl = '';
     },
     
     // Önizlenen dosyayı indir
@@ -921,6 +1428,89 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
+    },
+    
+    getFileIconStyle(fileType) {
+      const colorMap = {
+        '.mp4': { bgColor: '#ffe9e8', color: '#e74c3c' }, // Video
+        '.mov': { bgColor: '#ffe9e8', color: '#e74c3c' }, 
+        '.avi': { bgColor: '#ffe9e8', color: '#e74c3c' }, 
+        '.mkv': { bgColor: '#ffe9e8', color: '#e74c3c' },
+        '.wmv': { bgColor: '#ffe9e8', color: '#e74c3c' },
+        '.webm': { bgColor: '#ffe9e8', color: '#e74c3c' },
+        
+        '.mp3': { bgColor: '#fff9e3', color: '#f39c12' }, // Ses
+        '.wav': { bgColor: '#fff9e3', color: '#f39c12' }, 
+        '.ogg': { bgColor: '#fff9e3', color: '#f39c12' }, 
+        '.flac': { bgColor: '#fff9e3', color: '#f39c12' },
+        '.aac': { bgColor: '#fff9e3', color: '#f39c12' },
+        
+        '.xls': { bgColor: '#e4f8ed', color: '#2ecc71' }, // Excel
+        '.xlsx': { bgColor: '#e4f8ed', color: '#2ecc71' },
+        
+        '.doc': { bgColor: '#e6f4fb', color: '#3498db' }, // Word
+        '.docx': { bgColor: '#e6f4fb', color: '#3498db' },
+        
+        '.ppt': { bgColor: '#faeee7', color: '#e67e22' }, // PowerPoint
+        '.pptx': { bgColor: '#faeee7', color: '#e67e22' },
+        
+        '.pdf': { bgColor: '#ffe9e8', color: '#e74c3c' }, // PDF
+        
+        '.jpg': { bgColor: '#f2e6f7', color: '#9b59b6' }, // Resim
+        '.jpeg': { bgColor: '#f2e6f7', color: '#9b59b6' },
+        '.png': { bgColor: '#f2e6f7', color: '#9b59b6' },
+        '.gif': { bgColor: '#f2e6f7', color: '#9b59b6' },
+        '.bmp': { bgColor: '#f2e6f7', color: '#9b59b6' },
+        
+        '.zip': { bgColor: '#e8edf1', color: '#34495e' }, // Arşiv
+        '.rar': { bgColor: '#e8edf1', color: '#34495e' },
+        '.7z': { bgColor: '#e8edf1', color: '#34495e' },
+        '.tar': { bgColor: '#e8edf1', color: '#34495e' },
+        '.gz': { bgColor: '#e8edf1', color: '#34495e' },
+        
+        '.txt': { bgColor: '#f0f2f3', color: '#7f8c8d' }, // Metin
+        '.rtf': { bgColor: '#f0f2f3', color: '#7f8c8d' }
+      };
+      
+      const defaultStyle = { bgColor: '#e9f1ff', color: '#4568dc' };
+      const style = colorMap[fileType.toLowerCase()] || defaultStyle;
+      
+      return {
+        backgroundColor: style.bgColor,
+        color: style.color
+      };
+    },
+    
+    // Video MIME türünü al
+    getVideoMimeType(fileType) {
+      const mimeMap = {
+        '.mp4': 'video/mp4',
+        '.mov': 'video/quicktime',
+        '.avi': 'video/x-msvideo',
+        '.mkv': 'video/x-matroska',
+        '.wmv': 'video/x-ms-wmv',
+        '.webm': 'video/webm',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.flac': 'audio/flac',
+        '.aac': 'audio/aac'
+      };
+      
+      return mimeMap[fileType.toLowerCase()] || 'video/mp4';
+    },
+    
+    // Ses MIME türünü al
+    getAudioMimeType(fileType) {
+      const mimeMap = {
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.flac': 'audio/flac',
+        '.aac': 'audio/aac'
+      };
+      
+      return mimeMap[fileType.toLowerCase()] || 'audio/mpeg';
     }
   }
 }
@@ -947,48 +1537,55 @@ export default {
   position: relative;
   flex: 1;
   min-width: 250px;
-}
-
-.search-box i {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #64748b;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 12px 40px 12px 40px;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 14px;
-  outline: none;
+  padding: 0 15px;
   transition: all 0.3s;
 }
 
-.search-box input:focus {
+.search-box:focus-within {
   border-color: #4568dc;
   box-shadow: 0 0 0 3px rgba(69, 104, 220, 0.1);
 }
 
+.search-box i.fas.fa-search {
+  color: #64748b;
+  font-size: 14px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  font-size: 14px;
+  outline: none;
+  background: transparent;
+}
+
 .clear-search {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
   background: none;
   border: none;
   color: #64748b;
   cursor: pointer;
+  padding: 0;
+  margin-left: 5px;
+  flex-shrink: 0;
 }
 
 .filter-options {
   display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 10px;
 }
 
-.favorites-filter {
+.favorites-filter, .group-by-date-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1000,6 +1597,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .favorites-filter.active {
@@ -1010,6 +1608,16 @@ export default {
 
 .favorites-filter.active i {
   color: #e74c3c;
+}
+
+.group-by-date-btn.active {
+  background-color: #e9f1ff;
+  color: #4568dc;
+  border-color: #4568dc;
+}
+
+.group-by-date-btn.active i {
+  color: #4568dc;
 }
 
 .sort-dropdown {
@@ -1029,10 +1637,11 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .dropdown-content {
-  display: none;
+  display: block;
   position: absolute;
   right: 0;
   background-color: white;
@@ -1042,10 +1651,6 @@ export default {
   border-radius: 8px;
   padding: 5px 0;
   margin-top: 5px;
-}
-
-.sort-dropdown:hover .dropdown-content {
-  display: block;
 }
 
 .dropdown-content button {
@@ -1073,6 +1678,71 @@ export default {
 .dropdown-content button.active {
   background-color: #e9f1ff;
   color: #4568dc;
+}
+
+/* Dosya Grup Başlıkları */
+.file-date-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.file-date-group {
+  border-radius: 12px;
+  background-color: #f8fafc;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.date-group-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.file-grid.date-grouped {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.file-card.compact {
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.file-card.compact:hover {
+  transform: scale(0.98);
+}
+
+.file-card.compact .file-icon {
+  width: 50px;
+  height: 50px;
+}
+
+.file-card.compact .file-name {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.file-card.compact .file-header {
+  padding: 15px;
+}
+
+.file-card.compact .file-info {
+  padding: 0 15px 15px;
+}
+
+.file-card.compact .file-actions {
+  padding: 10px 15px;
+}
+
+.file-card.compact .download-btn {
+  padding: 8px 0;
+  font-size: 13px;
 }
 
 /* Yükleniyor Göstergesi */
@@ -1125,11 +1795,70 @@ export default {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
+  border-top: 3px solid transparent;
 }
 
 .file-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Dosya uzantısına göre renkli üst çizgiler */
+.file-card[data-file-type=".mp4"], 
+.file-card[data-file-type=".mov"], 
+.file-card[data-file-type=".avi"], 
+.file-card[data-file-type=".mkv"], 
+.file-card[data-file-type=".wmv"] {
+  border-top-color: #e74c3c; /* Video dosyaları için kırmızı */
+}
+
+.file-card[data-file-type=".mp3"], 
+.file-card[data-file-type=".wav"], 
+.file-card[data-file-type=".ogg"], 
+.file-card[data-file-type=".flac"], 
+.file-card[data-file-type=".aac"] {
+  border-top-color: #f39c12; /* Ses dosyaları için sarı */
+}
+
+.file-card[data-file-type=".xls"], 
+.file-card[data-file-type=".xlsx"] {
+  border-top-color: #2ecc71; /* Excel dosyaları için yeşil */
+}
+
+.file-card[data-file-type=".doc"], 
+.file-card[data-file-type=".docx"] {
+  border-top-color: #3498db; /* Word dosyaları için mavi */
+}
+
+.file-card[data-file-type=".ppt"], 
+.file-card[data-file-type=".pptx"] {
+  border-top-color: #e67e22; /* PowerPoint dosyaları için turuncu */
+}
+
+.file-card[data-file-type=".pdf"] {
+  border-top-color: #e74c3c; /* PDF dosyaları için kırmızı */
+}
+
+.file-card[data-file-type=".jpg"], 
+.file-card[data-file-type=".jpeg"], 
+.file-card[data-file-type=".png"], 
+.file-card[data-file-type=".gif"], 
+.file-card[data-file-type=".bmp"] {
+  border-top-color: #9b59b6; /* Resim dosyaları için mor */
+}
+
+.file-card[data-file-type=".zip"], 
+.file-card[data-file-type=".rar"], 
+.file-card[data-file-type=".7z"], 
+.file-card[data-file-type=".tar"], 
+.file-card[data-file-type=".gz"] {
+  border-top-color: #34495e; /* Arşiv dosyaları için koyu gri */
+}
+
+.file-card[data-file-type=".txt"], 
+.file-card[data-file-type=".rtf"] {
+  border-top-color: #7f8c8d; /* Metin dosyaları için gri */
 }
 
 .file-header {
@@ -1263,6 +1992,47 @@ export default {
   transform: scale(0.98);
 }
 
+/* Duyarlı Tasarım */
+@media (max-width: 768px) {
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-options {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .favorites-filter, .group-by-date-btn, .sort-dropdown {
+    flex: 1;
+    min-width: 150px;
+  }
+  
+  .search-box {
+    max-width: none;
+  }
+  
+  .file-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .file-grid.date-grouped {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .filter-options {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .file-grid.date-grouped {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Popup Bildirimi */
 .popup-notification {
   position: fixed;
@@ -1349,18 +2119,6 @@ export default {
 
 .popup-close:hover {
   color: #000;
-}
-
-/* Duyarlı Tasarım */
-@media (max-width: 768px) {
-  .search-filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .file-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Önizleme Modal */
@@ -1564,6 +2322,50 @@ export default {
 .pdf-preview {
   height: 70vh;
   width: 100%;
+}
+
+/* Video Önizleme */
+.video-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  overflow: auto;
+}
+
+.video-player {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+/* Ses Önizleme */
+.audio-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  overflow: auto;
+}
+
+.audio-player-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-file-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.audio-player {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
 }
 
 /* Desteklenmeyen Dosya */
@@ -1821,6 +2623,291 @@ export default {
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
+  }
+}
+
+/* Animasyonlar - Tarih grupları geçişi */
+.date-group-transition-enter-active, 
+.date-group-transition-leave-active {
+  transition: all 0.6s ease;
+}
+
+.date-group-transition-enter-from, 
+.date-group-transition-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.date-group-transition-move {
+  transition: transform 0.6s ease;
+}
+
+/* Dosya kartları geçişi */
+.file-cards-transition-enter-active, 
+.file-cards-transition-leave-active {
+  transition: all 0.5s ease;
+}
+
+.file-cards-transition-enter-from, 
+.file-cards-transition-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.file-cards-transition-move {
+  transition: transform 0.5s ease;
+}
+
+/* Kartların boyut değişimini animasyonlu yapma */
+.file-card {
+  transition: all 0.4s ease-in-out;
+}
+
+.file-card.compact {
+  transform: scale(0.95);
+  transition: all 0.4s ease-in-out;
+}
+
+.file-card.compact:hover {
+  transform: scale(0.98);
+  transition: all 0.3s ease-in-out;
+}
+
+.file-date-group {
+  animation: fadeInUp 0.7s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Klasör Gezinme Çubuğu (Aktif klasör varsa) */
+.folder-navigation {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  padding: 8px 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.folder-path {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.path-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.3s;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.path-item:hover {
+  color: #4568dc;
+  border-color: #4568dc;
+  background-color: #e9f1ff;
+}
+
+.path-item.root {
+  color: #4568dc;
+  font-weight: 500;
+}
+
+.path-separator {
+  color: #cbd5e1;
+  margin: 0 2px;
+}
+
+.current-folder {
+  color: #4568dc;
+  font-weight: 600;
+  padding: 6px 10px;
+  background-color: #e9f1ff;
+  border-radius: 6px;
+  border: 1px solid #4568dc;
+  font-size: 14px;
+}
+
+.back-button {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px 15px;
+  border-radius: 6px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.back-button:hover:not(:disabled) {
+  color: #4568dc;
+  border-color: #4568dc;
+  background-color: #e9f1ff;
+}
+
+.back-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Klasör Stilleri */
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title i {
+  color: #4568dc;
+}
+
+.folders-section, .subfolder-section, .folder-files-section, .files-section {
+  padding: 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.folders-section:last-child, .subfolder-section:last-child, 
+.folder-files-section:last-child, .files-section:last-child {
+  border-bottom: none;
+}
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.folder-card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  border: 1px solid #f1f5f9;
+}
+
+.folder-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  border-color: #4568dc;
+}
+
+.folder-icon {
+  background-color: #e9f1ff;
+  color: #4568dc;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.folder-info {
+  text-align: center;
+  flex-grow: 1;
+}
+
+.folder-name {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  word-break: break-word;
+}
+
+.folder-actions {
+  margin-top: 15px;
+  width: 100%;
+}
+
+.folder-download-btn {
+  width: 100%;
+  padding: 8px 0;
+  background-color: #4568dc;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s;
+}
+
+.folder-download-btn:hover {
+  background-color: #3b57b5;
+}
+
+.folder-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.folder-title i {
+  color: #4568dc;
+}
+
+.card-header {
+  padding: 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .folder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .folder-card {
+    padding: 15px;
+  }
+  
+  .folder-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 0.8em;
   }
 }
 </style> 

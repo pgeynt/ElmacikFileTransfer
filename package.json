@@ -15,10 +15,12 @@
   "description": "Electron Vue.js Application",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "@handsontable/vue": "^12.0.0",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.8.4",
     "electron": "^35.1.5",
     "electron-builder": "^26.0.12",
+    "handsontable": "^15.2.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "xlsx": "^0.18.5"

@@ -31,13 +31,26 @@ contextBridge.exposeInMainWorld('electron', {
       callback(arg);
     });
   },
+  // Klasör işlemleri için yeni fonksiyonlar
+  uploadFolder: (folderData) => ipcRenderer.invoke('upload-folder', folderData),
+  createS3Folder: (folderName) => ipcRenderer.invoke('create-s3-folder', folderName),
+  listS3Folders: () => ipcRenderer.invoke('list-s3-folders'),
+  deleteS3Folder: (folderKey) => ipcRenderer.invoke('delete-s3-folder', folderKey),
   // Yükleme geçmişi işlemleri
   getUploadHistory: () => ipcRenderer.invoke('get-upload-history'),
   deleteHistoryItem: (id) => ipcRenderer.invoke('delete-history-item', id),
+  // S3 Dosya Kontrolü
+  checkFileExistsInS3: (key) => ipcRenderer.invoke('check-file-exists-in-s3', key),
   // S3 Dosya Listesi ve İndirme İşlemleri
   listS3Files: () => ipcRenderer.invoke('list-s3-files'),
   downloadS3File: (fileInfo) => ipcRenderer.invoke('download-s3-file', fileInfo),
   previewS3File: (fileInfo) => ipcRenderer.invoke('preview-s3-file', fileInfo),
   generateShareLink: (fileInfo) => ipcRenderer.invoke('generate-share-link', fileInfo),
-  toggleFavorite: (key) => ipcRenderer.invoke('toggle-favorite', key)
+  toggleFavorite: (key) => ipcRenderer.invoke('toggle-favorite', key),
+  // S3 Dosya Yönetimi için Yeni Metodlar
+  renameS3File: (fileInfo) => ipcRenderer.invoke('rename-s3-file', fileInfo),
+  deleteS3File: (fileInfo) => ipcRenderer.invoke('delete-s3-file', fileInfo),
+  // S3 Klasör İşlemleri
+  listS3FolderContents: (folderKey) => ipcRenderer.invoke('list-s3-folder-contents', folderKey),
+  downloadS3Folder: (folderInfo) => ipcRenderer.invoke('download-s3-folder', folderInfo)
 }); 
