@@ -32,7 +32,7 @@ export default {
 
 <style scoped>
 .sidebar {
-  background: linear-gradient(180deg, #4568dc 0%, #3f5bc7 100%);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark, #3f5bc7) 100%);
   color: white;
   width: 70px;
   height: 100vh;
@@ -61,7 +61,7 @@ export default {
   display: flex;
   align-items: center;
   padding: 15px 20px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -87,14 +87,33 @@ export default {
 }
 
 .menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.2);
   color: white;
   border-left: 3px solid white;
 }
 
 .menu-item.active {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.25);
   color: white;
   border-left: 3px solid white;
+}
+
+.theme-dark .sidebar {
+  background: linear-gradient(180deg, #202225 0%, #2f3136 100%);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .menu-item {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.theme-dark .menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.theme-dark .menu-item.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 </style> 

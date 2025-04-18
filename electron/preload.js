@@ -52,5 +52,8 @@ contextBridge.exposeInMainWorld('electron', {
   deleteS3File: (fileInfo) => ipcRenderer.invoke('delete-s3-file', fileInfo),
   // S3 Klasör İşlemleri
   listS3FolderContents: (folderKey) => ipcRenderer.invoke('list-s3-folder-contents', folderKey),
-  downloadS3Folder: (folderInfo) => ipcRenderer.invoke('download-s3-folder', folderInfo)
+  downloadS3Folder: (folderInfo) => ipcRenderer.invoke('download-s3-folder', folderInfo),
+  // Tema Ayarları
+  getAppTheme: () => ipcRenderer.invoke('get-app-theme'),
+  setAppTheme: (themeId) => ipcRenderer.invoke('set-app-theme', themeId)
 }); 

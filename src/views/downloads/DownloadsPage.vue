@@ -2967,4 +2967,168 @@ export default {
 .file-card {
   position: relative;
 }
+
+/* Koyu mod düzenlemeleri */
+.theme-dark .card {
+  background-color: #36393f;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .search-filter-bar {
+  background-color: #2f3136;
+}
+
+.theme-dark .search-box {
+  background-color: #40444b;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .search-box input {
+  color: #ffffff;
+}
+
+.theme-dark .search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.theme-dark .favorites-filter, 
+.theme-dark .group-by-date-btn, 
+.theme-dark .sort-button {
+  background-color: #2f3136;
+  color: #b9bbbe;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .favorites-filter:hover, 
+.theme-dark .group-by-date-btn:hover, 
+.theme-dark .sort-button:hover {
+  background-color: #40444b;
+}
+
+.theme-dark .favorites-filter.active, 
+.theme-dark .group-by-date-btn.active {
+  background-color: rgba(114, 137, 218, 0.2);
+  color: #7289da;
+  border-color: #7289da;
+}
+
+.theme-dark .dropdown-content {
+  background-color: #36393f;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .dropdown-content button {
+  color: #ffffff;
+}
+
+.theme-dark .dropdown-content button:hover {
+  background-color: #40444b;
+}
+
+.theme-dark .dropdown-content button.active {
+  background-color: rgba(114, 137, 218, 0.2);
+  color: #7289da;
+}
+
+.theme-dark .folder-navigation {
+  background-color: #2f3136;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .back-button,
+.theme-dark .path-item {
+  background-color: #40444b;
+  color: #b9bbbe;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .back-button:hover,
+.theme-dark .path-item:hover {
+  background-color: #4f545c;
+  color: #ffffff;
+}
+
+.theme-dark .path-separator {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-dark .current-folder {
+  color: #7289da;
+}
+
+.theme-dark .folder-card {
+  background-color: #2f3136;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .folder-card:hover {
+  background-color: #40444b;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .folder-icon {
+  color: #7289da;
+}
+
+.theme-dark .file-card {
+  background-color: #36393f;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .file-card:hover {
+  background-color: #40444b;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .file-actions-small button,
+.theme-dark .file-actions button {
+  background-color: #40444b;
+  color: #b9bbbe;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .file-actions-small button:hover,
+.theme-dark .file-actions button:hover {
+  background-color: #4f545c;
+  color: #ffffff;
+}
+
+.theme-dark .file-actions-small button.favorited {
+  color: #f04747;
+  background-color: rgba(240, 71, 71, 0.2);
+}
+
+.theme-dark .section-title {
+  color: #ffffff;
+}
+
+.theme-dark .file-name {
+  color: #ffffff;
+}
+
+.theme-dark .file-meta {
+  color: #b9bbbe;
+}
+
+/* Koyu mod için başlık ve klasör isimlerini düzenleme */
+.theme-dark .page-title {
+  color: #ffffff;
+}
+
+.theme-dark .folder-name {
+  color: #ffffff;
+}
+
+.theme-dark .section-title {
+  color: #ffffff;
+}
+
+.theme-dark .folder-title {
+  color: #ffffff;
+}
+
+.theme-dark .klasörler {
+  color: #ffffff;
+}
 </style> 

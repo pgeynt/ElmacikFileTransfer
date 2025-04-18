@@ -23,7 +23,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f5f7fb;
+  background-color: var(--color-background, #f5f7fb);
 }
 
 .main-content {

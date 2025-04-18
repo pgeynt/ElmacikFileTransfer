@@ -31,12 +31,12 @@ export default {
 <style scoped>
 .header {
   height: 70px;
-  background-color: white;
+  background-color: var(--color-card-bg, white);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(var(--color-background-rgb, 0, 0, 0), 0.1);
   position: fixed;
   top: 0;
   left: 70px;
@@ -52,14 +52,14 @@ export default {
 .search-box {
   display: flex;
   align-items: center;
-  background-color: #f5f7fb;
+  background-color: var(--color-secondary, #f5f7fb);
   border-radius: 20px;
   padding: 8px 15px;
   width: 300px;
 }
 
 .search-box i {
-  color: #8e9ab4;
+  color: var(--color-text-light, #8e9ab4);
   margin-right: 10px;
 }
 
@@ -67,8 +67,12 @@ export default {
   background: none;
   border: none;
   outline: none;
-  color: #2c3e50;
+  color: var(--color-text, #2c3e50);
   width: 100%;
+}
+
+.search-box input::placeholder {
+  color: var(--color-text-light, #8e9ab4);
 }
 
 .notifications {
@@ -79,14 +83,14 @@ export default {
 
 .notifications i {
   font-size: 20px;
-  color: #8e9ab4;
+  color: var(--color-text-light, #8e9ab4);
 }
 
 .badge {
   position: absolute;
   top: -8px;
   right: -8px;
-  background-color: #f56565;
+  background-color: var(--color-error, #f56565);
   color: white;
   font-size: 12px;
   width: 18px;
@@ -108,6 +112,7 @@ export default {
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
+  border: 2px solid var(--color-primary, #4568dc);
 }
 
 .avatar img {

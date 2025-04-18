@@ -825,7 +825,7 @@ export default {
 }
 
 .stat-card {
-  background-color: white;
+  background-color: var(--color-card-bg);
   border-radius: 10px;
   padding: 20px;
   display: flex;
@@ -836,7 +836,7 @@ export default {
 .stat-icon {
   width: 48px;
   height: 48px;
-  background-color: #e9f1ff;
+  background-color: var(--color-secondary);
   border-radius: 10px;
   display: flex;
   justify-content: center;
@@ -845,7 +845,7 @@ export default {
 }
 
 .stat-icon i {
-  color: #4568dc;
+  color: var(--color-primary);
   font-size: 20px;
 }
 
@@ -853,11 +853,12 @@ export default {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .stat-content p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-light);
   font-size: 14px;
 }
 
@@ -878,11 +879,12 @@ export default {
   display: flex;
   align-items: center;
   margin: 0;
+  color: var(--color-text);
 }
 
 .card-header h2 i {
   margin-right: 10px;
-  color: #4568dc;
+  color: var(--color-primary);
 }
 
 .header-actions {
@@ -898,7 +900,7 @@ export default {
 .view-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 4px;
@@ -906,8 +908,8 @@ export default {
 }
 
 .view-btn.active {
-  background-color: #e9f1ff;
-  color: #4568dc;
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
 }
 
 .btn-sm {
@@ -916,7 +918,7 @@ export default {
 }
 
 .file-upload-area {
-  border: 2px dashed #ccc;
+  border: 2px dashed var(--color-border);
   border-radius: 8px;
   padding: 30px;
   text-align: center;
@@ -924,20 +926,20 @@ export default {
 }
 
 .drag-active {
-  border-color: #4568dc;
-  background-color: rgba(69, 104, 220, 0.05);
+  border-color: var(--color-primary);
+  background-color: rgba(var(--color-primary-rgb), 0.05);
 }
 
 .upload-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .upload-content i {
   margin-bottom: 15px;
-  color: #4568dc;
+  color: var(--color-primary);
 }
 
 .upload-content p {
@@ -957,7 +959,7 @@ export default {
 
 .queue-stats {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .upload-queue-list {
@@ -969,7 +971,7 @@ export default {
   display: flex;
   align-items: center;
   padding: 12px 15px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .queue-item:last-child {
@@ -979,13 +981,13 @@ export default {
 .queue-item-icon {
   width: 40px;
   height: 40px;
-  background-color: #e9f1ff;
+  background-color: var(--color-secondary);
   border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
   margin-right: 15px;
-  color: #4568dc;
+  color: var(--color-primary);
 }
 
 .queue-item-content {
@@ -994,6 +996,7 @@ export default {
 
 .queue-item-name {
   font-weight: 500;
+  color: var(--color-text);
   margin-bottom: 5px;
 }
 
@@ -1002,19 +1005,19 @@ export default {
 }
 
 .status-pending {
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .status-uploading {
-  color: #3b82f6;
+  color: var(--color-info);
 }
 
 .status-completed {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .status-error {
-  color: #ef4444;
+  color: var(--color-error);
 }
 
 .queue-item-progress {
@@ -1024,8 +1027,8 @@ export default {
 .progress-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid #e2e8f0;
-  border-top-color: #3b82f6;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-info);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -1048,12 +1051,13 @@ export default {
 }
 
 .file-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: var(--color-card-bg);
 }
 
 .file-card:hover {
@@ -1065,7 +1069,7 @@ export default {
   display: flex;
   justify-content: center;
   margin-bottom: 15px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .file-card-info {
@@ -1077,10 +1081,11 @@ export default {
   font-size: 16px;
   word-break: break-word;
   font-weight: 500;
+  color: var(--color-text);
 }
 
 .file-details {
-  color: #64748b;
+  color: var(--color-text-light);
   font-size: 13px;
   margin: 0;
 }
@@ -1090,24 +1095,24 @@ export default {
   justify-content: space-between;
   margin-top: 15px;
   padding-top: 15px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-border);
 }
 
 .action-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   padding: 5px;
   transition: color 0.3s;
 }
 
 .action-btn:hover {
-  color: #4568dc;
+  color: var(--color-primary);
 }
 
 .action-btn.favorited {
-  color: #e74c3c;
+  color: var(--color-error);
 }
 
 /* Dosya Liste Görünümü */
@@ -1124,20 +1129,21 @@ table {
 th {
   text-align: left;
   padding: 12px 15px;
-  background-color: #f8fafc;
-  color: #64748b;
+  background-color: var(--color-secondary);
+  color: var(--color-text-light);
   font-weight: 600;
   font-size: 14px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 td {
   padding: 12px 15px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--color-secondary);
 }
 
 td.file-name {
@@ -1148,7 +1154,7 @@ td.file-name {
 td.file-name i {
   margin-right: 10px;
   font-size: 16px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 td.file-actions {
@@ -1159,7 +1165,7 @@ td.file-actions {
 .no-files {
   text-align: center;
   padding: 30px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .no-files i {
@@ -1201,7 +1207,7 @@ td.file-actions {
   display: flex;
   align-items: center;
   padding: 15px 20px;
-  background-color: white;
+  background-color: var(--color-card-bg);
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   min-width: 300px;
@@ -1209,15 +1215,15 @@ td.file-actions {
 }
 
 .popup-content.success {
-  border-left: 5px solid #4CAF50;
+  border-left: 5px solid var(--color-success);
 }
 
 .popup-content.error {
-  border-left: 5px solid #F44336;
+  border-left: 5px solid var(--color-error);
 }
 
 .popup-content.info {
-  border-left: 5px solid #2196F3;
+  border-left: 5px solid var(--color-info);
 }
 
 .popup-content i {
@@ -1226,15 +1232,15 @@ td.file-actions {
 }
 
 .popup-content.success i {
-  color: #4CAF50;
+  color: var(--color-success);
 }
 
 .popup-content.error i {
-  color: #F44336;
+  color: var(--color-error);
 }
 
 .popup-content.info i {
-  color: #2196F3;
+  color: var(--color-info);
 }
 
 .popup-message {
@@ -1244,25 +1250,26 @@ td.file-actions {
 .popup-message h3 {
   margin: 0 0 5px 0;
   font-size: 16px;
+  color: var(--color-text);
 }
 
 .popup-message p {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .popup-close {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   font-size: 16px;
   padding: 0;
 }
 
 .popup-close:hover {
-  color: #000;
+  color: var(--color-text);
 }
 
 /* Klasör Yönetimi */
@@ -1279,7 +1286,7 @@ td.file-actions {
   display: flex;
   flex-direction: column;
   padding: 12px 15px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .folder-item:last-child {
@@ -1301,14 +1308,16 @@ td.file-actions {
 .folder-title i {
   margin-right: 10px;
   font-size: 16px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .folder-title input {
   width: 100%;
   padding: 5px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  color: var(--color-text);
+  background-color: var(--color-card-bg);
 }
 
 .folder-actions {
@@ -1323,7 +1332,7 @@ td.file-actions {
 .empty-folder {
   text-align: center;
   padding: 30px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .folder-files {
@@ -1335,7 +1344,7 @@ td.file-actions {
   display: flex;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .file-info {
@@ -1347,14 +1356,16 @@ td.file-actions {
 .file-info i {
   margin-right: 10px;
   font-size: 16px;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 
 .file-info input {
   width: 100%;
   padding: 5px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  color: var(--color-text);
+  background-color: var(--color-card-bg);
 }
 
 .file-actions {
@@ -1365,14 +1376,14 @@ td.file-actions {
 .action-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   padding: 5px;
   transition: color 0.3s;
 }
 
 .action-btn:hover {
-  color: #4568dc;
+  color: var(--color-primary);
 }
 
 /* Klasör İsim Modal */
@@ -1390,11 +1401,12 @@ td.file-actions {
 }
 
 .modal-content {
-  background-color: white;
+  background-color: var(--color-card-bg);
   padding: 20px;
   border-radius: 8px;
   max-width: 400px;
   width: 100%;
+  color: var(--color-text);
 }
 
 .modal-header {
@@ -1407,12 +1419,13 @@ td.file-actions {
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
+  color: var(--color-text);
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   font-size: 16px;
 }
@@ -1428,13 +1441,16 @@ td.file-actions {
 .form-group label {
   display: block;
   margin-bottom: 5px;
+  color: var(--color-text);
 }
 
 .form-group input {
   width: 100%;
-  padding: 5px;
-  border: 1px solid #e2e8f0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background-color: var(--color-card-bg);
+  color: var(--color-text);
 }
 
 .modal-footer {
@@ -1451,12 +1467,148 @@ td.file-actions {
 }
 
 .btn-secondary {
-  background-color: #64748b;
+  background-color: var(--color-text-light);
   color: white;
 }
 
 .btn-primary {
-  background-color: #4568dc;
+  background-color: var(--color-primary);
   color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-text);
+}
+
+/* Discord stilinde koyu mod düzenlemeleri */
+.theme-dark .card {
+  background-color: #36393f;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .card-header {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .card-header h2 {
+  color: #ffffff;
+}
+
+.theme-dark .file-upload-area {
+  background-color: #2f3136;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.theme-dark .file-upload-area.drag-active {
+  background-color: rgba(114, 137, 218, 0.15);
+  border-color: #7289da;
+}
+
+.theme-dark .file-upload-area p {
+  color: #b9bbbe;
+}
+
+.theme-dark .btn-primary {
+  background-color: #7289da;
+}
+
+.theme-dark .btn-primary:hover {
+  background-color: #677bc4;
+}
+
+.theme-dark .btn-secondary {
+  background-color: #4f545c;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .btn-secondary:hover {
+  background-color: #5d6269;
+}
+
+.theme-dark .folder-item {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .folder-header {
+  background-color: #2f3136;
+}
+
+.theme-dark .folder-header:hover {
+  background-color: #40444b;
+}
+
+.theme-dark .folder-title {
+  color: #ffffff;
+}
+
+.theme-dark .folder-content {
+  background-color: #2a2c31;
+}
+
+.theme-dark .folder-file-item {
+  background-color: #36393f;
+}
+
+.theme-dark .folder-file-item:hover {
+  background-color: #40444b;
+}
+
+.theme-dark .empty-folder {
+  color: #b9bbbe;
+}
+
+.theme-dark .modal-content {
+  background-color: #36393f;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .modal-header {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .modal-header h3 {
+  color: #ffffff;
+}
+
+.theme-dark label {
+  color: #b9bbbe;
+}
+
+.theme-dark .form-control {
+  background-color: #40444b;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.theme-dark .form-control:focus {
+  border-color: #7289da;
+  box-shadow: 0 0 0 2px rgba(114, 137, 218, 0.2);
+}
+
+.theme-dark .queue-item {
+  background-color: #36393f;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .queue-item:hover {
+  background-color: #40444b;
+}
+
+.theme-dark .queue-item-name, 
+.theme-dark .view-options .view-btn {
+  color: #ffffff;
+}
+
+.theme-dark .file-card {
+  background-color: #36393f;
+}
+
+.theme-dark .file-card:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
 }
 </style> 

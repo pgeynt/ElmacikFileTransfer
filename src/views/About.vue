@@ -19,7 +19,7 @@ export default {
   padding: 20px;
 }
 a {
-  color: #42b983;
+  color: var(--color-primary, #42b983);
   text-decoration: none;
 }
 </style> 

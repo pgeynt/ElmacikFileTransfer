@@ -1277,6 +1277,48 @@ ipcMain.handle('delete-s3-folder', async (event, folderKey) => {
   }
 });
 
+// Tema ayarlarını kaydetmek için dosya yolu
+const themeFilePath = path.join(app.getPath('userData'), 'app-theme.json');
+
+// Mevcut tema ayarını yükleme
+function loadAppTheme() {
+  try {
+    if (fs.existsSync(themeFilePath)) {
+      const data = fs.readFileSync(themeFilePath, 'utf8');
+      return JSON.parse(data).themeId || 'light';
+    }
+  } catch (error) {
+    console.error('Tema ayarları yüklenirken hata:', error);
+  }
+  return 'light'; // Varsayılan tema
+}
+
+// Tema ayarını kaydetme
+function saveAppTheme(themeId) {
+  try {
+    fs.writeFileSync(themeFilePath, JSON.stringify({ themeId }), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Tema ayarları kaydedilirken hata:', error);
+    return false;
+  }
+}
+
+// Tema ayarlarını getirme isteği
+ipcMain.handle('get-app-theme', async () => {
+  return loadAppTheme();
+});
+
+// Tema ayarlarını kaydetme isteği
+ipcMain.handle('set-app-theme', async (event, themeId) => {
+  const success = saveAppTheme(themeId);
+  return {
+    success: success,
+    themeId: themeId,
+    message: success ? 'Tema ayarları başarıyla kaydedildi' : 'Tema ayarları kaydedilirken bir hata oluştu'
+  };
+});
+
 // Uygulama başladığında geçmişi yükle
 app.on('ready', () => {
   createWindow();
